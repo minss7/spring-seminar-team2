@@ -37,6 +37,7 @@ class GlobalExceptionHandler {
             ApiErrorResponse(
                 code = "MEETING_NOT_FOUND",
                 message = exception.message ?: "모임을 찾을 수 없습니다.",
+                fieldErrors = emptyList(),
             ),
         )
 }
