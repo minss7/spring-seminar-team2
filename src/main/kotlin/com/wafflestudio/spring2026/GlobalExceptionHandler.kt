@@ -29,6 +29,18 @@ class GlobalExceptionHandler {
         )
     }
 
+    @ExceptionHandler(IllegalArgumentException::class)
+    fun handleIllegalArgument(
+            exception: IllegalArgumentException,
+    ): ResponseEntity<ApiErrorResponse> =
+            ResponseEntity.badRequest().body(
+                    ApiErrorResponse(
+                            code = "INVALID_REQUEST",
+                            message = exception.message ?: "잘못된 요청입니다.",
+                            fieldErrors = emptyList(),
+                    ),
+            )
+
     @ExceptionHandler(MeetingNotFoundException::class)
     fun handleMeetingNotFound(
         exception: MeetingNotFoundException,
