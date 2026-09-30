@@ -25,6 +25,7 @@ CREATE TABLE `seminars` (
 	`apply_start_at`    DATETIME     NOT NULL COMMENT '수강 신청 시작 일시',
 	`apply_end_at`      DATETIME     NOT NULL COMMENT '수강 신청 종료 일시',
 	`total_grace_days`  INT          NOT NULL COMMENT '기본 제공 총 Grace Day 수',
+	`created_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
 	CONSTRAINT `PK_SEMINARS` PRIMARY KEY (`id`)
 ) COMMENT='세미나 정보';
 
