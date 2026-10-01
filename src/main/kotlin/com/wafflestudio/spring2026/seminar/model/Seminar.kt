@@ -19,5 +19,5 @@ data class Seminar(
         @Column("total_grace_days")
         val totalGraceDays: Int,
         @Column("created_at")
-        val createdAt: LocalDateTime? = null,
+        val createdAt: LocalDateTime = LocalDateTime.now(),
 )

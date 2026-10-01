@@ -11,6 +11,7 @@ import java.util.Collections.emptyList
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleMethodArgumentNotValid(
         exception: MethodArgumentNotValidException,

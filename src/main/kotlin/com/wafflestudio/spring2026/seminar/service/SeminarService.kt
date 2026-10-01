@@ -2,12 +2,15 @@ package com.wafflestudio.spring2026.seminar.service
 
 import com.wafflestudio.spring2026.seminar.dto.SeminarCreateRequest
 import com.wafflestudio.spring2026.seminar.dto.SeminarDetailResponse
+import com.wafflestudio.spring2026.seminar.dto.SeminarUpdateRequest
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.seminar.model.Seminar
 import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.time.ZoneOffset
+
 
 
 @Service
@@ -48,6 +51,38 @@ class SeminarService(
 
         return SeminarDetailResponse.from(
             seminar = seminar,
+            enrolledCount = enrolledCount,
+            sessionCount = sessionCount,
+        )
+    }
+
+    @Transactional
+    fun updateSeminar(
+        seminarId: Long,
+        request: SeminarUpdateRequest,
+    ): SeminarDetailResponse {
+        // 1. 애플리케이션 비즈니스 규칙 검증 (Service 책임)
+        if (request.isTitlePresent) {
+            require(!request.title.isNullOrBlank()) { "title은 공백이거나 null일 수 없습니다." }
+        }
+
+        // 2. 데이터 조회 및 예외 처리
+        val seminar = seminarRepository.findById(seminarId)
+            .orElseThrow { SeminarNotFoundException(seminarId) }
+
+        // 3. 엔티티 상태 변경
+        val updatedSeminar = seminar.copy(
+            title = request.title ?: seminar.title,
+            description = if (request.isDescriptionPresent) request.description else seminar.description,
+            createdAt = seminar.createdAt,
+        )
+
+        // 4. 영속화 및 응답 생성
+        val savedSeminar = seminarRepository.save(updatedSeminar)
+        val enrolledCount = seminarRepository.countEnrolledUsers(seminarId)
+        val sessionCount = seminarRepository.countSessions(seminarId)
+        return SeminarDetailResponse.from(
+            seminar = savedSeminar,
             enrolledCount = enrolledCount,
             sessionCount = sessionCount,
         )
