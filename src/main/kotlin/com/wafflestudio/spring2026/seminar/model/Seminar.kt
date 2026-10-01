@@ -1,8 +1,9 @@
 package com.wafflestudio.spring2026.seminar.model
 
 import org.springframework.data.annotation.Id
+import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Table("seminars")
 data class Seminar(
@@ -11,8 +12,12 @@ data class Seminar(
         val title: String,
         val description: String?,
         val capacity: Int,
-        val applyStartAt: OffsetDateTime,
-        val applyEndAt: OffsetDateTime,
+        @Column("apply_start_at")
+        val applyStartAt: LocalDateTime,
+        @Column("apply_end_at")
+        val applyEndAt: LocalDateTime,
+        @Column("total_grace_days")
         val totalGraceDays: Int,
-        val createdAt: OffsetDateTime = OffsetDateTime.now()
+        @Column("created_at")
+        val createdAt: LocalDateTime = LocalDateTime.now(),
 )

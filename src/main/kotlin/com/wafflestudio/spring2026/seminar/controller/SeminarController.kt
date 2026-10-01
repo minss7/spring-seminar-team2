@@ -1,15 +1,15 @@
 package com.wafflestudio.spring2026.seminar.controller
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.wafflestudio.spring2026.seminar.dto.SeminarCreateRequest
 import com.wafflestudio.spring2026.seminar.dto.SeminarCreateResponse
+import com.wafflestudio.spring2026.seminar.dto.SeminarDetailResponse
+import com.wafflestudio.spring2026.seminar.dto.SeminarUpdateRequest
 import com.wafflestudio.spring2026.seminar.service.SeminarService
 import jakarta.validation.Valid
 import java.net.URI
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/seminars")
@@ -27,4 +27,21 @@ class SeminarController(
                 .created(URI.create("/seminars/${seminar.id}"))
                 .body(response)
     }
+
+    @GetMapping("/{seminarId}")
+    fun getSeminar(@PathVariable seminarId: Long): ResponseEntity<SeminarDetailResponse> {
+        val response = seminarService.getSeminar(seminarId)
+        return ResponseEntity.ok(response)
+    }
+
+    @PatchMapping("/{seminarId}")
+    fun updateSeminar(
+        @PathVariable seminarId: Long,
+        @RequestBody body: Map<String, Any?>,
+    ): SeminarDetailResponse {
+        val request = SeminarUpdateRequest.fromMap(body)
+        return seminarService.updateSeminar(seminarId, request)
+    }
+
+
 }
