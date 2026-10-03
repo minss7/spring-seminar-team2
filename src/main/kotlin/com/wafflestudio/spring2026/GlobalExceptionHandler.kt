@@ -4,6 +4,7 @@ import com.wafflestudio.spring2026.auth.exception.EmailAlreadyExistsException
 import com.wafflestudio.spring2026.meeting.MeetingNotFoundException
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.user.exception.UserNotFoundException
+import com.wafflestudio.spring2026.user.exception.UserStatusNotPendingException
 import jakarta.validation.constraints.Email
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -78,6 +79,17 @@ class GlobalExceptionHandler {
             ApiErrorResponse(
                 code = "USER_NOT_FOUND",
                 message = exception.message ?: "해당 ID를 가진 사용자는 존재하지 않습니다.",
+            ),
+        )
+
+    @ExceptionHandler(UserStatusNotPendingException::class)
+    fun handleUserStatusNotPending(
+        exception: UserStatusNotPendingException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ApiErrorResponse(
+                code = "USER_STATUS_NOT_PENDING",
+                message = exception.message ?: "해당 사용자는 이미 ${exception.status} 상태입니다.",
             ),
         )
 

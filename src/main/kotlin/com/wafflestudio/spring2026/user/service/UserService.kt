@@ -6,6 +6,7 @@ import com.wafflestudio.spring2026.auth.exception.EmailAlreadyExistsException
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
 import com.wafflestudio.spring2026.user.exception.UserNotFoundException
+import com.wafflestudio.spring2026.user.exception.UserStatusNotPendingException
 import com.wafflestudio.spring2026.user.model.User
 import com.wafflestudio.spring2026.user.repository.UserRepository
 import org.springframework.stereotype.Service
@@ -63,5 +64,17 @@ class UserService(
     fun getUserById(userId: Long): User { //GET /users/{userId}
         return userRepository.findById(userId)
             .orElseThrow { UserNotFoundException() }
+    }
+
+    fun patchUserStatus(userId: Long, newStatus: String) { //PATCH /users/{userId}/approval
+        //없는 사용자면 404
+        val user: User = userRepository.findById(userId)
+            .orElseThrow { UserNotFoundException() }
+        //status가 PENDING아니면 409
+        if(user.status != "PENDING"){
+            throw UserStatusNotPendingException(user.status)
+        }
+        //status 수정
+        userRepository.save(user.copy(status = newStatus))
     }
 }
