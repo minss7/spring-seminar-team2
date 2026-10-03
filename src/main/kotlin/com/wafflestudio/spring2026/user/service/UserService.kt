@@ -5,6 +5,7 @@ import com.wafflestudio.spring2026.auth.dto.SignupResponse
 import com.wafflestudio.spring2026.auth.exception.EmailAlreadyExistsException
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
+import com.wafflestudio.spring2026.user.exception.UserNotFoundException
 import com.wafflestudio.spring2026.user.model.User
 import com.wafflestudio.spring2026.user.repository.UserRepository
 import org.springframework.stereotype.Service
@@ -16,7 +17,7 @@ class UserService(
     private val userRepository: UserRepository,
     private val seminarRepository: SeminarRepository,
 ) {
-    fun signup(
+    fun signup( //POST /auth/signup
         request: SignupRequest,
     ): SignupResponse {
         val requestingUser = User(
@@ -57,5 +58,10 @@ class UserService(
                 .atOffset(ZoneOffset.ofHours(9))
                 .toString(),
         )
+    }
+
+    fun getUserById(userId: Long): User { //GET /users/{userId}
+        return userRepository.findById(userId)
+            .orElseThrow { UserNotFoundException() }
     }
 }
