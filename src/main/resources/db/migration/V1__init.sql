@@ -13,7 +13,9 @@ CREATE TABLE `users` (
 	`role`                 VARCHAR(20)  NOT NULL COMMENT '역할 (ADMIN, STAFF, ROOKIE)',
 	`status`               VARCHAR(20)  NOT NULL COMMENT '가입 상태 (PENDING, APPROVED, REJECTED)',
 	`assigned_seminar_id`  BIGINT       NULL     COMMENT '운영진 담당 세미나 ID (FK, Nullable)',
-	CONSTRAINT `PK_USERS` PRIMARY KEY (`id`)
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '가입 신청 일시',
+	CONSTRAINT `PK_USERS` PRIMARY KEY (`id`),
+    CONSTRAINT `UQ_USERS_EMAIL` UNIQUE (`email`)
 ) COMMENT='사용자 정보';
 
 -- 2. 세미나 테이블
