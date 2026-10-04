@@ -1,8 +1,6 @@
 package com.wafflestudio.spring2026.meeting.repository
 
-import com.wafflestudio.spring2026.meeting.MeetingNotFoundException
 import com.wafflestudio.spring2026.meeting.model.Meeting
-import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Repository
 
 @Repository

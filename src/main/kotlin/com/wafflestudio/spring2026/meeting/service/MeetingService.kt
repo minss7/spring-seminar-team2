@@ -1,6 +1,6 @@
 package com.wafflestudio.spring2026.meeting.service
 
-import com.wafflestudio.spring2026.meeting.MeetingNotFoundException
+import com.wafflestudio.spring2026.meeting.exception.MeetingNotFoundException
 import com.wafflestudio.spring2026.meeting.model.Meeting
 import com.wafflestudio.spring2026.meeting.repository.MeetingRepository
 import org.springframework.stereotype.Service
