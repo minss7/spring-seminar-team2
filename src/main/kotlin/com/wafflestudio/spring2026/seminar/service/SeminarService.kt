@@ -32,7 +32,7 @@ class SeminarService(
                 applyStartAt = request.applyStartAt.withOffsetSameInstant(KST_OFFSET).toLocalDateTime(),
                 applyEndAt = request.applyEndAt.withOffsetSameInstant(KST_OFFSET).toLocalDateTime(),
                 totalGraceDays = request.totalGraceDays,
-                createdAt = java.time.LocalDateTime.now()
+                createdAt = java.time.LocalDateTime.now(KST_OFFSET)
         )
 
         // 저장 처리 후 반환

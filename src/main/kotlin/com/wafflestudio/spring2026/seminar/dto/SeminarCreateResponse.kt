@@ -13,8 +13,7 @@ data class SeminarCreateResponse(
         fun from(seminar: Seminar): SeminarCreateResponse {
             return SeminarCreateResponse(
                     id = seminar.id!!,
-                    createdAt = seminar.createdAt?.atOffset(KST_OFFSET)
-                        ?: OffsetDateTime.now(KST_OFFSET),
+                    createdAt = seminar.createdAt.atOffset(KST_OFFSET)
             )
         }
     }
