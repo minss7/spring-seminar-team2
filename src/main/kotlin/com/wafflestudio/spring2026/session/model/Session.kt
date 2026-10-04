@@ -23,9 +23,9 @@ data class Session(
     @Column("assignment_title")
     val assignmentTitle : String,
 
-    @Column("session_description")
+    @Column("lecture_content")
     val lectureContent: String?,
 
-    @Column("assignment_description")
+    @Column("assignment_content")
     val assignmentContent: String?,
 )

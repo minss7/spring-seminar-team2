@@ -50,8 +50,8 @@ CREATE TABLE `sessions` (
 	`starts_at`             DATETIME     NOT NULL COMMENT '시작 일시 (정렬 기준)',
 	`location`              VARCHAR(255) NULL     COMMENT '수업 장소 (선택)',
 	`assignment_title`      VARCHAR(255) NOT NULL COMMENT '과제 제목',
-	`session_description`   TEXT         NULL     COMMENT '수업 설명 (Markdown)',
-	`assignment_description` TEXT        NULL     COMMENT '과제 설명 (Markdown)',
+	`lecture_content`   TEXT         NULL     COMMENT '수업 설명 (Markdown)',
+	`assignment_content` TEXT        NULL     COMMENT '과제 설명 (Markdown)',
 	`seminar_id`            BIGINT       NOT NULL COMMENT '소속 세미나 ID (FK)',
 	CONSTRAINT `PK_SESSIONS` PRIMARY KEY (`id`)
 ) COMMENT='수업 회차';
