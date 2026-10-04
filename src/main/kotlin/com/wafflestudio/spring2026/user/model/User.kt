@@ -7,13 +7,23 @@ import java.time.LocalDateTime
 
 @Table("users")
 data class User(
-    @Id val id: Long? = null,
+    @Id
+    val id: Long? = null,
+
     val email: String,
+
     val password: String,
+
     val name: String,
+
     @Column("github_username") val githubUsername: String,
     val role: String,
+
     val status: String,
-    @Column("assigned_seminar_id") val assignedSeminarId: Long? = null,
-    @Column("created_at") val createdAt: LocalDateTime,
+
+    @Column("assigned_seminar_id")
+    val assignedSeminarId: Long? = null,
+
+    @Column("created_at")
+    val createdAt: LocalDateTime,
 )

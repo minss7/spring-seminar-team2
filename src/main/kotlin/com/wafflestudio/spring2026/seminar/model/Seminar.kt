@@ -9,15 +9,22 @@ import java.time.LocalDateTime
 data class Seminar(
         @Id
         val id: Long? = null,
+
         val title: String,
+
         val description: String?,
+
         val capacity: Int,
+
         @Column("apply_start_at")
         val applyStartAt: LocalDateTime,
+
         @Column("apply_end_at")
         val applyEndAt: LocalDateTime,
+
         @Column("total_grace_days")
         val totalGraceDays: Int,
+
         @Column("created_at")
         val createdAt: LocalDateTime = LocalDateTime.now(),
 )

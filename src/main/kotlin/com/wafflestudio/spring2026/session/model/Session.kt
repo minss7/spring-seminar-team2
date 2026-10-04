@@ -9,8 +9,8 @@ import org.springframework.data.relational.core.mapping.Table
 data class Session(
     @Id
     val id: Long? = null,
-    @Column("seminar_id")
 
+    @Column("seminar_id")
     val seminarId : Long,
 
     val title: String,
@@ -28,5 +28,4 @@ data class Session(
 
     @Column("assignment_description")
     val assignmentContent: String?,
-
 )
