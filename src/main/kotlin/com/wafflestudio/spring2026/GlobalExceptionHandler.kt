@@ -1,6 +1,7 @@
 package com.wafflestudio.spring2026
 
 import com.wafflestudio.spring2026.auth.exception.EmailAlreadyExistsException
+import com.wafflestudio.spring2026.enrollment.exception.EnrollmentNotFoundException
 import com.wafflestudio.spring2026.meeting.MeetingNotFoundException
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.user.exception.UserNotFoundException
@@ -101,6 +102,18 @@ class GlobalExceptionHandler {
             ApiErrorResponse(
                 code = "SEMINAR_NOT_FOUND",
                 message = exception.message ?: "세미나를 찾을 수 없습니다.",
+                fieldErrors = emptyList(),
+            ),
+        )
+
+    @ExceptionHandler(EnrollmentNotFoundException::class)
+    fun handleEnrollmentNotFound(
+        exception: EnrollmentNotFoundException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ApiErrorResponse(
+                code = "ENROLLMENT_NOT_FOUND",
+                message = exception.message ?: "수강 신청을 찾을 수 없습니다.",
                 fieldErrors = emptyList(),
             ),
         )
