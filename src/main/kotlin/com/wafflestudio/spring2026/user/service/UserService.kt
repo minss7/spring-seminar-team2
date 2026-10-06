@@ -29,7 +29,7 @@ class UserService(
             role = request.role,
             status = "PENDING",
             assignedSeminarId = request.seminarId, //null일때 있음
-            createdAt = LocalDateTime.now(),
+            createdAt = LocalDateTime.now(ZoneOffset.ofHours(9)),
         )
 
         //이메일 중복이면 409

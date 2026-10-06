@@ -13,7 +13,7 @@ CREATE TABLE `users` (
 	`role`                 VARCHAR(20)  NOT NULL COMMENT '역할 (ADMIN, STAFF, ROOKIE)',
 	`status`               VARCHAR(20)  NOT NULL COMMENT '가입 상태 (PENDING, APPROVED, REJECTED)',
 	`assigned_seminar_id`  BIGINT       NULL     COMMENT '운영진 담당 세미나 ID (FK, Nullable)',
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '가입 신청 일시',
+    `created_at` DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP() + INTERVAL 9 HOUR) COMMENT '가입 신청 일시',
 	CONSTRAINT `PK_USERS` PRIMARY KEY (`id`),
     CONSTRAINT `UQ_USERS_EMAIL` UNIQUE (`email`)
 ) COMMENT='사용자 정보';
@@ -27,7 +27,7 @@ CREATE TABLE `seminars` (
 	`apply_start_at`    DATETIME     NOT NULL COMMENT '수강 신청 시작 일시',
 	`apply_end_at`      DATETIME     NOT NULL COMMENT '수강 신청 종료 일시',
 	`total_grace_days`  INT          NOT NULL COMMENT '기본 제공 총 Grace Day 수',
-	`created_at`        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성 일시',
+	`created_at`        DATETIME     NOT NULL DEFAULT (UTC_TIMESTAMP() + INTERVAL 9 HOUR) COMMENT '생성 일시',
 	CONSTRAINT `PK_SEMINARS` PRIMARY KEY (`id`)
 ) COMMENT='세미나 정보';
 
@@ -36,7 +36,7 @@ CREATE TABLE `enrollments` (
 	`id`                    BIGINT   NOT NULL AUTO_INCREMENT COMMENT '수강 신청 고유 ID',
 	`remaining_grace_days`  INT      NOT NULL COMMENT '개인별 남은 Grace Day 수',
 	`is_failed`             BOOLEAN  NOT NULL DEFAULT FALSE COMMENT '탈락 여부 (TRUE: 탈락, FALSE: 수강 중)',
-	`created_at`            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '수강 신청 일시',
+	`created_at`            DATETIME NOT NULL DEFAULT (UTC_TIMESTAMP() + INTERVAL 9 HOUR) COMMENT '수강 신청 일시',
 	`user_id`               BIGINT   NOT NULL COMMENT '루키 사용자 ID (FK)',
 	`seminar_id`            BIGINT   NOT NULL COMMENT '세미나 고유 ID (FK)',
 	CONSTRAINT `PK_ENROLLMENTS` PRIMARY KEY (`id`),
@@ -50,8 +50,8 @@ CREATE TABLE `sessions` (
 	`starts_at`             DATETIME     NOT NULL COMMENT '시작 일시 (정렬 기준)',
 	`location`              VARCHAR(255) NULL     COMMENT '수업 장소 (선택)',
 	`assignment_title`      VARCHAR(255) NOT NULL COMMENT '과제 제목',
-	`session_description`   TEXT         NULL     COMMENT '수업 설명 (Markdown)',
-	`assignment_description` TEXT        NULL     COMMENT '과제 설명 (Markdown)',
+	`lecture_content`   TEXT         NULL     COMMENT '수업 설명 (Markdown)',
+	`assignment_content` TEXT        NULL     COMMENT '과제 설명 (Markdown)',
 	`seminar_id`            BIGINT       NOT NULL COMMENT '소속 세미나 ID (FK)',
 	CONSTRAINT `PK_SESSIONS` PRIMARY KEY (`id`)
 ) COMMENT='수업 회차';

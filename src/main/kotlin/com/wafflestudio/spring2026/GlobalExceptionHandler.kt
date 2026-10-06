@@ -2,11 +2,10 @@ package com.wafflestudio.spring2026
 
 import com.wafflestudio.spring2026.auth.exception.EmailAlreadyExistsException
 import com.wafflestudio.spring2026.enrollment.exception.EnrollmentNotFoundException
-import com.wafflestudio.spring2026.meeting.MeetingNotFoundException
+import com.wafflestudio.spring2026.meeting.exception.MeetingNotFoundException
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.user.exception.UserNotFoundException
 import com.wafflestudio.spring2026.user.exception.UserStatusNotPendingException
-import jakarta.validation.constraints.Email
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException

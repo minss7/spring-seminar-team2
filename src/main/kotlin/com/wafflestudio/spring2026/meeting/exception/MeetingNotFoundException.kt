@@ -1,4 +1,4 @@
-package com.wafflestudio.spring2026.meeting
+package com.wafflestudio.spring2026.meeting.exception
 
 class MeetingNotFoundException(
     val meetingId: Long,

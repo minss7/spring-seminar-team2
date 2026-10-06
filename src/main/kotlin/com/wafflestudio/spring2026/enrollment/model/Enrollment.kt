@@ -17,7 +17,7 @@ data class Enrollment(
     val failed: Boolean = false,
 
     @Column("created_at")
-    val createdAt: LocalDateTime = LocalDateTime.now(),
+    val createdAt: LocalDateTime,
 
     @Column("user_id")
     val userId: Long,
