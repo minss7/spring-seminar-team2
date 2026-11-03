@@ -10,11 +10,15 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import java.net.URI
+import com.wafflestudio.spring2026.auth.dto.LoginRequest
+import com.wafflestudio.spring2026.auth.dto.LoginResponse
+import com.wafflestudio.spring2026.auth.service.AuthService
 
 @RestController
 @RequestMapping("/auth")
 class AuthController(
     private val userService: UserService,
+    private val authService: AuthService,
 ) {
     @PostMapping("/signup")
     fun signup(
@@ -26,4 +30,9 @@ class AuthController(
             .created(URI.create("/auth/signup/${response.id}"))
             .body(response)
     }
+    @PostMapping("/login")
+    fun login(
+        @Valid @RequestBody request: LoginRequest,
+    ): LoginResponse =
+        authService.login(request)
 }

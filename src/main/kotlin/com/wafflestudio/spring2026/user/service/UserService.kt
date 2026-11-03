@@ -9,6 +9,7 @@ import com.wafflestudio.spring2026.user.exception.UserNotFoundException
 import com.wafflestudio.spring2026.user.exception.UserStatusNotPendingException
 import com.wafflestudio.spring2026.user.model.User
 import com.wafflestudio.spring2026.user.repository.UserRepository
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -17,13 +18,14 @@ import java.time.ZoneOffset
 class UserService(
     private val userRepository: UserRepository,
     private val seminarRepository: SeminarRepository,
+    private val passwordEncoder: PasswordEncoder,
 ) {
     fun signup( //POST /auth/signup
         request: SignupRequest,
     ): SignupResponse {
         val requestingUser = User(
             email = request.email,
-            password = request.password,
+            password = requireNotNull(passwordEncoder.encode(request.password)),
             name = request.name,
             githubUsername = request.githubUsername,
             role = request.role,
