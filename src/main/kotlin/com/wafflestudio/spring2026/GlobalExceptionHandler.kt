@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.Collections.emptyList
+import com.wafflestudio.spring2026.auth.exception.LoginFailedException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -113,6 +114,18 @@ class GlobalExceptionHandler {
             ApiErrorResponse(
                 code = "ENROLLMENT_NOT_FOUND",
                 message = exception.message ?: "수강 신청을 찾을 수 없습니다.",
+                fieldErrors = emptyList(),
+            ),
+        )
+
+    @ExceptionHandler(LoginFailedException::class)
+    fun handleLoginFailed(
+        exception: LoginFailedException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            ApiErrorResponse(
+                code = "UNAUTHORIZED",
+                message = exception.message ?: "인증에 실패했습니다.",
                 fieldErrors = emptyList(),
             ),
         )
