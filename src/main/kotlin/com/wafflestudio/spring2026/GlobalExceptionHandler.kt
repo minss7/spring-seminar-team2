@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.Collections.emptyList
 import com.wafflestudio.spring2026.auth.exception.LoginFailedException
+import org.springframework.security.access.AccessDeniedException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -127,6 +128,17 @@ class GlobalExceptionHandler {
                 code = "UNAUTHORIZED",
                 message = exception.message ?: "인증에 실패했습니다.",
                 fieldErrors = emptyList(),
+            ),
+        )
+
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(
+        exception: AccessDeniedException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ApiErrorResponse(
+                code = "FORBIDDEN",
+                message = exception.message ?: "접근 권한이 없습니다.",
             ),
         )
 }
