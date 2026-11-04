@@ -9,6 +9,7 @@ import com.wafflestudio.spring2026.user.exception.UserNotFoundException
 import com.wafflestudio.spring2026.user.exception.UserStatusNotPendingException
 import com.wafflestudio.spring2026.user.model.User
 import com.wafflestudio.spring2026.user.repository.UserRepository
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -78,5 +79,17 @@ class UserService(
         }
         //status 수정
         userRepository.save(user.copy(status = newStatus))
+    }
+
+    fun checkIfUserCanRequestUserId(user: User){
+        //for GET /users/{userId}
+        //가입이 승인된 사용자인지 확인(admin도 approved상태)
+        //안 맞으면 403
+        var canRequest = true
+        if(user.role !in setOf("ADMIN", "STAFF", "ROOKIE")) canRequest = false
+        if(user.status != "APPROVED") canRequest = false
+        if(!canRequest){
+            throw AccessDeniedException("사용자 조회 권한이 없습니다.");
+        }
     }
 }
