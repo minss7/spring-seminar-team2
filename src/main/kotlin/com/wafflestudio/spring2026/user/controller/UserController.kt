@@ -22,10 +22,10 @@ class UserController(
     @GetMapping("/{userId}")
     fun getUserById(
         @PathVariable("userId") userId: Long,
-        @AuthenticationPrincipal user: User,
+        @AuthenticationPrincipal principal: User,
     ): ResponseEntity<GetUserResponse> {
         //user가 approve돼있는지 확인, 아니면 service에서 403
-        userService.checkIfUserCanRequestUserId(user)
+        userService.checkIfUserCanRequestUserId(principal)
 
         val response: User = userService.getUserById(userId)
 
@@ -37,7 +37,12 @@ class UserController(
     fun patchUserStatus(
         @PathVariable("userId") userId: Long,
         @Valid @RequestBody request: UserApprovalRequest,
+        @AuthenticationPrincipal principal: User,
     ): ResponseEntity<GetUserResponse> {
+        //요청자가 찐빠 안내는지 확인
+        //운영진 가입신청 - 와장만 가능. 루키 가입신청 - 와장,운영진 가능. 찐빠=403
+        userService.checkIfCanApprove(principal, userId)
+
         userService.patchUserStatus(userId, request.status)
         val response: User = userService.getUserById(userId)
 

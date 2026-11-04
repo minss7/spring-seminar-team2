@@ -82,7 +82,7 @@ class UserService(
     }
 
     fun checkIfUserCanRequestUserId(user: User){
-        //for GET /users/{userId}
+        //GET /users/{userId}
         //가입이 승인된 사용자인지 확인(admin도 approved상태)
         //안 맞으면 403
         var canRequest = true
@@ -90,6 +90,28 @@ class UserService(
         if(user.status != "APPROVED") canRequest = false
         if(!canRequest){
             throw AccessDeniedException("사용자 조회 권한이 없습니다.");
+        }
+    }
+
+    fun checkIfCanApprove(principal: User, userId: Long){
+        //PATCH /users/{userId}/approval
+        //principal이 userId를 심사할수 있는 사람인지 확인
+        //운영진 가입신청 - 와장만 가능. 루키 가입신청 - 와장,운영진 가능
+        //안맞으면 403
+        fun throw403() {
+            throw AccessDeniedException("심사 권한이 없습니다.")
+        }
+
+        if(principal.status != "APPROVED") throw403()
+        val principalRole = principal.role
+        val userRole = userRepository.findById(userId)
+            .orElseThrow { UserNotFoundException() } //없는 userId면 404
+            .role
+
+        if (principalRole !in setOf("ADMIN", "STAFF")) throw403()
+        if (userRole !in setOf("STAFF", "ROOKIE")) throw403()
+        if (userRole == "STAFF") {
+            if (principalRole != "ADMIN") throw403()
         }
     }
 }
