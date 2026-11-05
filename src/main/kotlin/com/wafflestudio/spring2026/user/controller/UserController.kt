@@ -6,6 +6,7 @@ import com.wafflestudio.spring2026.user.model.User
 import com.wafflestudio.spring2026.user.service.UserService
 import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -21,7 +22,11 @@ class UserController(
     @GetMapping("/{userId}")
     fun getUserById(
         @PathVariable("userId") userId: Long,
+        @AuthenticationPrincipal principal: User,
     ): ResponseEntity<GetUserResponse> {
+        //user가 approve돼있는지 확인, 아니면 service에서 403
+        userService.checkIfUserCanRequestUserId(principal)
+
         val response: User = userService.getUserById(userId)
 
         return ResponseEntity
@@ -32,7 +37,12 @@ class UserController(
     fun patchUserStatus(
         @PathVariable("userId") userId: Long,
         @Valid @RequestBody request: UserApprovalRequest,
+        @AuthenticationPrincipal principal: User,
     ): ResponseEntity<GetUserResponse> {
+        //요청자가 찐빠 안내는지 확인
+        //운영진 가입신청 - 와장만 가능. 루키 가입신청 - 와장,운영진 가능. 찐빠=403
+        userService.checkIfCanApprove(principal, userId)
+
         userService.patchUserStatus(userId, request.status)
         val response: User = userService.getUserById(userId)
 
