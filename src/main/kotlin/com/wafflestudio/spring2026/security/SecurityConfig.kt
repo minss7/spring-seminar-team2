@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 class SecurityConfig(
     private val jwtAuthenticationFilter: JwtAuthenticationFilter,
+    private val securityErrorWriter: SecurityErrorWriter,
 ) {
     @Bean
     fun passwordEncoder(): PasswordEncoder =
@@ -25,6 +26,15 @@ class SecurityConfig(
             .csrf { it.disable() }
             .sessionManagement {
                 it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            }
+            .exceptionHandling { exceptions ->
+                exceptions.authenticationEntryPoint { _, response, _ ->
+                    securityErrorWriter.unauthorized(response)
+                }
+
+                exceptions.accessDeniedHandler { _, response, _ ->
+                    securityErrorWriter.forbidden(response)
+                }
             }
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(

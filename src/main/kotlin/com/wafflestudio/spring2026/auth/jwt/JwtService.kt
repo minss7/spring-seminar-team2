@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.Date
+import java.util.UUID
 
 @Service
 class JwtService(
@@ -19,6 +20,7 @@ class JwtService(
         val issuedAt = Instant.now()
 
         return Jwts.builder()
+            .id(UUID.randomUUID().toString())
             .subject(userId.toString())
             .issuedAt(Date.from(issuedAt))
             .expiration(Date.from(issuedAt.plusSeconds(3600)))
