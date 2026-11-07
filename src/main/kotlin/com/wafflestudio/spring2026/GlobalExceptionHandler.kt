@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.Collections.emptyList
 import com.wafflestudio.spring2026.auth.exception.LoginFailedException
 import org.springframework.security.access.AccessDeniedException
+import com.wafflestudio.spring2026.auth.exception.InvalidTokenException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -140,5 +141,16 @@ class GlobalExceptionHandler {
                 code = "FORBIDDEN",
                 message = exception.message ?: "접근 권한이 없습니다.",
             ),
+        )
+
+    @ExceptionHandler(InvalidTokenException::class)
+    fun handleInvalidToken(
+        exception: InvalidTokenException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            ApiErrorResponse(
+                code = "UNAUTHORIZED",
+                message = exception.message ?: "유효하지 않은 토큰입니다.",
+            )
         )
 }
