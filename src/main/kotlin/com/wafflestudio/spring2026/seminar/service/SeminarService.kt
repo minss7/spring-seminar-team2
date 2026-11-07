@@ -9,7 +9,8 @@ import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.ZoneOffset
-
+import com.wafflestudio.spring2026.user.model.User
+import org.springframework.security.access.AccessDeniedException
 
 
 @Service
@@ -18,7 +19,12 @@ class SeminarService(
 ) {
     private val KST_OFFSET = ZoneOffset.ofHours(9)
     @Transactional
-    fun createSeminar(request: SeminarCreateRequest): Seminar {
+    fun createSeminar(request: SeminarCreateRequest,
+                      principal: User,
+                      ): Seminar {
+        if (principal.role != "ADMIN") {
+            throw AccessDeniedException("세미나 개설 권한이 없습니다.")
+        }
         // 애플리케이션 비즈니스 규칙 검증
         require(request.applyEndAt.isAfter(request.applyStartAt)) {
             "applyEndAt은 applyStartAt보다 뒤여야 합니다."
@@ -40,7 +46,19 @@ class SeminarService(
     }
 
     @Transactional(readOnly = true)
-    fun getSeminar(seminarId: Long): SeminarDetailResponse {
+    fun getSeminar(seminarId: Long,
+                   principal: User,
+                   ): SeminarDetailResponse {
+
+        if (principal.role != "ADMIN") {
+            if (
+                principal.status != "APPROVED" ||
+                principal.role !in setOf("STAFF", "ROOKIE")
+            ) {
+                throw AccessDeniedException("세미나 조회 권한이 없습니다.")
+            }
+        }
+
         // DB에 세미나가 없으면 SeminarNotFoundException 발생 -> GlobalExceptionHandler에서 404 응답 처리
         val seminar = seminarRepository.findById(seminarId)
             .orElseThrow { SeminarNotFoundException(seminarId) }
@@ -59,7 +77,18 @@ class SeminarService(
     fun updateSeminar(
         seminarId: Long,
         request: SeminarUpdateRequest,
+        principal: User,
     ): SeminarDetailResponse {
+        if (principal.role != "ADMIN") {
+            if (
+                principal.status != "APPROVED" ||
+                principal.role != "STAFF" ||
+                principal.assignedSeminarId != seminarId
+            ) {
+                throw AccessDeniedException("세미나 수정 권한이 없습니다.")
+            }
+        }
+
         // 1. 애플리케이션 비즈니스 규칙 검증 (Service 책임)
         if (request.isTitlePresent) {
             require(!request.title.isNullOrBlank()) { "title은 공백이거나 null일 수 없습니다." }
