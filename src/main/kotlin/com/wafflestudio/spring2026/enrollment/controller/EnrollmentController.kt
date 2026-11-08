@@ -25,12 +25,12 @@ class EnrollmentController(
     ): EnrollmentCreateResponse =
         enrollmentService.enroll(seminarId, principal)
 
-    @DeleteMapping("/{enrollmentId}")
+    @DeleteMapping("/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun delete(
         @PathVariable seminarId: Long,
-        @PathVariable enrollmentId: Long
+        @AuthenticationPrincipal principal: User,
     ){
-        enrollmentService.delete(seminarId, enrollmentId)
+        enrollmentService.delete(seminarId, principal)
     }
 }

@@ -19,20 +19,19 @@ import java.time.ZoneOffset
 class EnrollmentService(
     private val enrollmentRepository: EnrollmentRepository,
     private val seminarRepository: SeminarRepository,
-    private val userRepository: UserRepository,
 ) {
     private val kst = ZoneOffset.ofHours(9)
 
     @Transactional
     fun enroll(seminarId: Long, principal: User): EnrollmentCreateResponse {
 
-        val seminar = seminarRepository.findById(seminarId)
-            .orElseThrow { SeminarNotFoundException(seminarId) }
         val userId = requireNotNull(principal.id)
-
         if (principal.role != "ROOKIE" || principal.status != "APPROVED") {
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
+
+        val seminar = seminarRepository.findById(seminarId)
+            .orElseThrow { SeminarNotFoundException(seminarId) }
 
         if (enrollmentRepository.existsByUserIdAndSeminarId(userId, seminarId)) {
             throw ResponseStatusException(HttpStatus.CONFLICT)
@@ -63,17 +62,18 @@ class EnrollmentService(
         )
     }
 
-    fun delete(seminarId: Long, enrollmentId: Long){
-        val enrollment = enrollmentRepository.findById(enrollmentId)
-            .orElseThrow { EnrollmentNotFoundException(enrollmentId) }
-
-        // 다른 세미나의 enrollment ID를 넣어도 삭제되지 않도록 확인
-        if (enrollment.seminarId != seminarId) {
-            throw EnrollmentNotFoundException(enrollmentId)
+    fun delete(seminarId: Long, principal: User){
+        if (principal.role != "ROOKIE" || principal.status != "APPROVED") {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
+
+        val userId = requireNotNull(principal.id)
 
         val seminar = seminarRepository.findById(seminarId)
             .orElseThrow { SeminarNotFoundException(seminarId) }
+
+        val enrollment = enrollmentRepository.findByUserIdAndSeminarId(userId, seminarId)
+            ?: throw EnrollmentNotFoundException(userId, seminarId)
 
         val now = LocalDateTime.now(kst)
         val isWithinApplicationPeriod =
@@ -83,7 +83,7 @@ class EnrollmentService(
             throw ResponseStatusException(HttpStatus.CONFLICT, "신청 기간에만 취소할 수 있습니다.")
         }
 
-        enrollmentRepository.deleteById(enrollmentId)
+        enrollmentRepository.delete(enrollment)
     }
 
 }
