@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.wafflestudio.spring2026.seminar.dto.SeminarCreateRequest
 import com.wafflestudio.spring2026.seminar.dto.SeminarCreateResponse
 import com.wafflestudio.spring2026.seminar.dto.SeminarDetailResponse
+import com.wafflestudio.spring2026.seminar.dto.SeminarPageResponse
 import com.wafflestudio.spring2026.seminar.dto.SeminarUpdateRequest
 import com.wafflestudio.spring2026.seminar.service.SeminarService
 import jakarta.validation.Valid
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import com.wafflestudio.spring2026.user.model.User
 import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.web.bind.annotation.RequestParam
 
 @RestController
 @RequestMapping("/seminars")
@@ -30,7 +32,16 @@ class SeminarController(
                 .created(URI.create("/seminars/${seminar.id}"))
                 .body(response)
     }
-
+    @GetMapping
+    fun getSeminars(
+        @RequestParam(required = false) keyword: String?,
+        @RequestParam(required = false) status: String?,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): ResponseEntity<SeminarPageResponse>{
+        val response = seminarService.getSeminars(keyword, status, page, size)
+        return ResponseEntity.ok(response)
+    }
     @GetMapping("/{seminarId}")
     fun getSeminar(@PathVariable seminarId: Long,
                         @AuthenticationPrincipal principal: User,

@@ -3,6 +3,7 @@ package com.wafflestudio.spring2026.seminar.service
 import com.wafflestudio.spring2026.seminar.dto.SeminarCreateRequest
 import com.wafflestudio.spring2026.seminar.dto.SeminarDetailResponse
 import com.wafflestudio.spring2026.seminar.dto.SeminarUpdateRequest
+import com.wafflestudio.spring2026.seminar.dto.SeminarPageResponse
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.seminar.model.Seminar
 import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
@@ -44,7 +45,75 @@ class SeminarService(
         // 저장 처리 후 반환
         return seminarRepository.save(seminar)
     }
+    @Transactional(readOnly = true)
+    fun getSeminars(
+        keyword : String?,
+        status : String?,
+        page : Int,
+        size : Int,
+    ): SeminarPageResponse {
+        require(status == null || status in setOf("BEFORE", "OPEN", "CLOSED")) {
+            "올바르지 않은 status 값입니다."
+        }
+        require(page >= 0) {
+            "page 값이 올바르지 않습니다."
+        }
 
+        require(size in 1..100) {
+            "size가 올바르지 않습니다."
+        }
+
+        val normalizedKeyword: String? =
+            if (keyword == null) {
+                null
+            } else {
+                val trimmedKeyword = keyword.trim()
+
+                if (trimmedKeyword.isNotEmpty()) {
+                    trimmedKeyword
+                } else {
+                    null
+                }
+            }
+        val now = java.time.LocalDateTime.now(KST_OFFSET)
+        val offset = page.toLong() * size
+
+        val seminars = seminarRepository.findSeminars(
+            keyword = normalizedKeyword,
+            status = status,
+            now = now,
+            size = size,
+            offset = offset,
+        )
+
+        val totalElements = seminarRepository.countSeminars(
+            keyword = normalizedKeyword,
+            status = status,
+            now = now,
+        )
+
+        val content = seminars.map { seminar ->
+            val seminarId = requireNotNull(seminar.id)
+
+            SeminarDetailResponse.from(
+                seminar = seminar,
+                enrolledCount = seminarRepository.countEnrolledUsers(seminarId),
+                sessionCount = seminarRepository.countSessions(seminarId),
+            )
+        }
+
+        val totalPages =
+            if (totalElements == 0L) 0
+            else ((totalElements + size - 1) / size).toInt()
+
+        return SeminarPageResponse(
+            content = content,
+            page = page,
+            size = size,
+            totalElements = totalElements,
+            totalPages = totalPages,
+        )
+    }
     @Transactional(readOnly = true)
     fun getSeminar(seminarId: Long,
                    principal: User,
