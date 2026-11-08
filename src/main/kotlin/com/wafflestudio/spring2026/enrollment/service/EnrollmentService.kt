@@ -1,13 +1,18 @@
 package com.wafflestudio.spring2026.enrollment.service
 
 import com.wafflestudio.spring2026.enrollment.dto.EnrollmentCreateResponse
+import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentListResponse
+import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentItemResponse
+import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentSeminarResponse
 import com.wafflestudio.spring2026.enrollment.exception.EnrollmentNotFoundException
 import com.wafflestudio.spring2026.enrollment.model.Enrollment
 import com.wafflestudio.spring2026.enrollment.repository.EnrollmentRepository
+import com.wafflestudio.spring2026.seminar.dto.SeminarDetailResponse
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
-import com.wafflestudio.spring2026.user.repository.UserRepository
 import com.wafflestudio.spring2026.user.model.User
+import org.springframework.data.domain.Sort
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -84,6 +89,74 @@ class EnrollmentService(
         }
 
         enrollmentRepository.delete(enrollment)
+    }
+
+    fun getMyEnrollments(
+        principal: User,
+        page: Int,
+        size: Int,
+    ): MyEnrollmentListResponse {
+        if (principal.role != "ROOKIE" || principal.status != "APPROVED") {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
+        }
+
+        if (page < 0 || size !in 1..100) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        }
+
+        val userId = requireNotNull(principal.id)
+        val pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(
+                Sort.Order.desc("createdAt"),
+                Sort.Order.desc("id"),
+            ),
+        )
+
+        val enrollments = enrollmentRepository.findAllByUserId(userId, pageable)
+        val totalElements = enrollmentRepository.countByUserId(userId)
+
+        val content = enrollments.map { enrollment ->
+            val seminar = seminarRepository.findById(enrollment.seminarId)
+                .orElseThrow { SeminarNotFoundException(enrollment.seminarId) }
+
+            val enrolledCount = seminarRepository.countEnrolledUsers(enrollment.seminarId)
+            val seminarResponse = SeminarDetailResponse.from(
+                seminar,
+                enrolledCount,
+                seminarRepository.countSessions(enrollment.seminarId),
+            )
+
+            MyEnrollmentItemResponse(
+                id = requireNotNull(enrollment.id),
+                seminar = MyEnrollmentSeminarResponse(
+                    id = seminarResponse.id,
+                    title = seminarResponse.title,
+                    description = seminarResponse.description,
+                    status = seminarResponse.status,
+                    capacity = seminarResponse.capacity,
+                    enrolledCount = seminarResponse.enrolledCount,
+                    applyStartAt = seminarResponse.applyStartAt,
+                    applyEndAt = seminarResponse.applyEndAt,
+                ),
+                graceDaysRemaining = enrollment.remainingGraceDays,
+                dropped = enrollment.failed,
+                createdAt = enrollment.createdAt.atOffset(ZoneOffset.ofHours(9)),
+            )
+        }
+
+        val totalPages =
+            if (totalElements == 0L) 0
+            else ((totalElements + size - 1) / size).toInt()
+
+        return MyEnrollmentListResponse(
+            content = content,
+            page = page,
+            size = size,
+            totalElements = totalElements,
+            totalPages = totalPages,
+        )
     }
 
 }
