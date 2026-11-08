@@ -1,5 +1,7 @@
 package com.wafflestudio.spring2026.user.controller
 
+import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentListResponse
+import com.wafflestudio.spring2026.enrollment.service.EnrollmentService
 import com.wafflestudio.spring2026.user.dto.GetUserResponse
 import com.wafflestudio.spring2026.user.dto.UserApprovalRequest
 import com.wafflestudio.spring2026.user.model.User
@@ -12,13 +14,33 @@ import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/users")
 class UserController(
     private val userService: UserService,
+    private val enrollmentService: EnrollmentService,
 ) {
+    @GetMapping("/me")
+    fun getCurrentUser(
+        @AuthenticationPrincipal principal: User
+    ): ResponseEntity<GetUserResponse> {
+        return ResponseEntity.ok(GetUserResponse.from(principal))
+    }
+
+    @GetMapping("/me/enrollments")
+    fun getMyEnrollments(
+        @AuthenticationPrincipal principal: User,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): ResponseEntity<MyEnrollmentListResponse>{
+        return ResponseEntity.ok(
+            enrollmentService.getMyEnrollments(principal, page, size)
+        )
+    }
+
     @GetMapping("/{userId}")
     fun getUserById(
         @PathVariable("userId") userId: Long,
