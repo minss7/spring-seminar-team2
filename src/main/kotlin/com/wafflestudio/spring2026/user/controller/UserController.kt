@@ -19,6 +19,13 @@ import org.springframework.web.bind.annotation.RestController
 class UserController(
     private val userService: UserService,
 ) {
+    @GetMapping("/me")
+    fun getCurrentUser(
+        @AuthenticationPrincipal principal: User
+    ): ResponseEntity<GetUserResponse> {
+        return ResponseEntity.ok(GetUserResponse.from(principal))
+    }
+
     @GetMapping("/{userId}")
     fun getUserById(
         @PathVariable("userId") userId: Long,
