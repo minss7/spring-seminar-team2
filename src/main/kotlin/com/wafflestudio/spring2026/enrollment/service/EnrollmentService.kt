@@ -31,7 +31,7 @@ class EnrollmentService(
     fun enroll(seminarId: Long, principal: User): EnrollmentCreateResponse {
 
         val userId = requireNotNull(principal.id)
-        if (principal.role != "ROOKIE" || principal.status != "APPROVED") {
+        if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
 
@@ -68,7 +68,7 @@ class EnrollmentService(
     }
 
     fun delete(seminarId: Long, principal: User){
-        if (principal.role != "ROOKIE" || principal.status != "APPROVED") {
+        if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
 
@@ -96,7 +96,7 @@ class EnrollmentService(
         page: Int,
         size: Int,
     ): MyEnrollmentListResponse {
-        if (principal.role != "ROOKIE" || principal.status != "APPROVED") {
+        if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
 
