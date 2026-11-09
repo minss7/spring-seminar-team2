@@ -2,6 +2,7 @@ package com.wafflestudio.spring2026.user.controller
 
 import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentListResponse
 import com.wafflestudio.spring2026.enrollment.service.EnrollmentService
+import com.wafflestudio.spring2026.user.dto.AuthRequestListResponse
 import com.wafflestudio.spring2026.user.dto.GetUserResponse
 import com.wafflestudio.spring2026.user.dto.UserApprovalRequest
 import com.wafflestudio.spring2026.user.model.User
@@ -41,8 +42,24 @@ class UserController(
         )
     }
 
+    @GetMapping
+    fun getAuthRequestPage( //가입 신청 목록 조회(와장, 운영진이 사용)
+        @AuthenticationPrincipal principal: User,
+        @RequestParam(name = "status", required = false) status: String?,
+        @RequestParam(name = "role", required = false) role: String?,
+        @RequestParam(name = "page", defaultValue = "0") page: Int,
+        @RequestParam(name = "size", defaultValue = "20") size: Int,
+    ): ResponseEntity<AuthRequestListResponse> {
+        //먼저 제대로된 요청인지 검증
+        userService.checkIfGetAuthRequestListValid(principal, status, role, page, size)
+        //response 받아오기
+        val response: AuthRequestListResponse =
+            userService.getAuthRequestPage(principal, status, role, page, size)
+        return ResponseEntity.ok(response)
+    }
+
     @GetMapping("/{userId}")
-    fun getUserById(
+    fun getUserById( //가입이 승인된 사용자가 누구의 정보든 조회
         @PathVariable("userId") userId: Long,
         @AuthenticationPrincipal principal: User,
     ): ResponseEntity<GetUserResponse> {

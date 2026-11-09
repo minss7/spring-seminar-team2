@@ -5,6 +5,8 @@ import com.wafflestudio.spring2026.auth.dto.SignupResponse
 import com.wafflestudio.spring2026.auth.exception.EmailAlreadyExistsException
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
+import com.wafflestudio.spring2026.user.dto.AuthRequestListResponse
+import com.wafflestudio.spring2026.user.dto.GetUserResponse
 import com.wafflestudio.spring2026.user.exception.UserNotFoundException
 import com.wafflestudio.spring2026.user.exception.UserStatusNotPendingException
 import com.wafflestudio.spring2026.user.model.User
@@ -113,5 +115,62 @@ class UserService(
         if (userRole == "STAFF") {
             if (principalRole != "ADMIN") throw403()
         }
+    }
+
+    fun checkIfGetAuthRequestListValid(
+        principal: User,
+        status: String?,
+        role: String?,
+        page: Int,
+        size: Int
+    ){
+        //GET /users 응답 가능한지 확인
+        //와장, 운영진만 조회가능. approved여야함.
+        if(principal.role !in setOf("ADMIN", "STAFF")) throw AccessDeniedException("조회 권한이 없습니다.")
+        if(principal.status != "APPROVED") throw AccessDeniedException("조회 권한이 없습니다.")
+        //page >= 0, 1 <= size <= 100. status, role도 이상한 거 아닌지 확인
+        require(page >= 0) { "page는 0 이상이어야 합니다." }
+        require(size in 1..100) { "size는 1부터 100까지 가능합니다." }
+        require(status == null || status in setOf("PENDING", "APPROVED", "REJECTED"))
+        require(role == null || role in setOf("STAFF", "ROOKIE"))
+    }
+
+    fun getAuthRequestPage(
+        principal: User,
+        status: String?,
+        role: String?,
+        page: Int,
+        size: Int
+    ): AuthRequestListResponse{
+        //GET /users 응답 반환 | EnrollmentService.getMyEnrollments랑 구조 같음
+        val principalRole = principal.role //ADMIN이거나 STAFF
+        var queryStatus = status //어떤 status들 응답할지
+        if(status == null) queryStatus = "ALL STATUS"
+        var queryRole = role //어떤 role들 응답할지
+        if(role == null) queryRole = "ALL ROLE"
+        if(principalRole == "STAFF") queryRole = "ROOKIE"
+        val pageOffset = page.toLong() * size
+
+        val authRequestList: List<User> = //content의 재료
+            userRepository.getAuthRequestPage(queryStatus, queryRole, size, pageOffset)
+        val content: List<GetUserResponse> = //반환할 페이지
+            authRequestList.map{ user ->
+                GetUserResponse.from(user)
+            }
+
+        val totalElements: Long = //전체 항목 수
+            userRepository.countTotalAuthRequestList(queryStatus, queryRole)
+
+        val totalPages: Int = //전체 페이지 수
+            if (totalElements == 0L) 0
+            else ((totalElements + size - 1) / size).toInt()
+
+        return AuthRequestListResponse(
+            content = content,
+            page = page,
+            size = size,
+            totalElements = totalElements,
+            totalPages = totalPages,
+        )
     }
 }
