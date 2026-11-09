@@ -29,8 +29,8 @@ interface UserRepository : CrudRepository<User, Long> {
         """
         SELECT COUNT(*) FROM users
         WHERE `role` IN ('STAFF', 'ROOKIE')
-          AND (:status IS NULL OR `status` = :status)
-          AND (:role IS NULL OR `role` = :role)
+          AND (:status = 'ALL STATUS' OR `status` = :status)
+          AND (:role = 'ALL ROLE' OR `role` = :role)
         """
     )
     fun countTotalAuthRequestList( //GET /users totalElements
