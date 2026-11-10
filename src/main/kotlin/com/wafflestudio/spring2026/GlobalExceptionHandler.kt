@@ -12,6 +12,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import java.util.Collections.emptyList
+import com.wafflestudio.spring2026.auth.exception.LoginFailedException
+import org.springframework.security.access.AccessDeniedException
+import com.wafflestudio.spring2026.auth.exception.InvalidTokenException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -115,5 +118,39 @@ class GlobalExceptionHandler {
                 message = exception.message ?: "수강 신청을 찾을 수 없습니다.",
                 fieldErrors = emptyList(),
             ),
+        )
+
+    @ExceptionHandler(LoginFailedException::class)
+    fun handleLoginFailed(
+        exception: LoginFailedException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            ApiErrorResponse(
+                code = "UNAUTHORIZED",
+                message = exception.message ?: "인증에 실패했습니다.",
+                fieldErrors = emptyList(),
+            ),
+        )
+
+    @ExceptionHandler(AccessDeniedException::class)
+    fun handleAccessDenied(
+        exception: AccessDeniedException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ApiErrorResponse(
+                code = "FORBIDDEN",
+                message = exception.message ?: "접근 권한이 없습니다.",
+            ),
+        )
+
+    @ExceptionHandler(InvalidTokenException::class)
+    fun handleInvalidToken(
+        exception: InvalidTokenException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            ApiErrorResponse(
+                code = "UNAUTHORIZED",
+                message = exception.message ?: "유효하지 않은 토큰입니다.",
+            )
         )
 }

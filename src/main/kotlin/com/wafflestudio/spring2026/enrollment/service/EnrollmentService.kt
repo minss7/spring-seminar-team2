@@ -1,14 +1,18 @@
 package com.wafflestudio.spring2026.enrollment.service
 
-import com.wafflestudio.spring2026.enrollment.dto.EnrollmentCreateRequest
 import com.wafflestudio.spring2026.enrollment.dto.EnrollmentCreateResponse
+import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentListResponse
+import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentItemResponse
+import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentSeminarResponse
 import com.wafflestudio.spring2026.enrollment.exception.EnrollmentNotFoundException
 import com.wafflestudio.spring2026.enrollment.model.Enrollment
 import com.wafflestudio.spring2026.enrollment.repository.EnrollmentRepository
+import com.wafflestudio.spring2026.seminar.dto.SeminarDetailResponse
 import com.wafflestudio.spring2026.seminar.exception.SeminarNotFoundException
 import com.wafflestudio.spring2026.seminar.repository.SeminarRepository
-import com.wafflestudio.spring2026.user.exception.UserNotFoundException
-import com.wafflestudio.spring2026.user.repository.UserRepository
+import com.wafflestudio.spring2026.user.model.User
+import org.springframework.data.domain.Sort
+import org.springframework.data.domain.PageRequest
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,34 +24,29 @@ import java.time.ZoneOffset
 class EnrollmentService(
     private val enrollmentRepository: EnrollmentRepository,
     private val seminarRepository: SeminarRepository,
-    private val userRepository: UserRepository,
 ) {
     private val kst = ZoneOffset.ofHours(9)
 
     @Transactional
-    fun enroll(seminarId: Long, request: EnrollmentCreateRequest): EnrollmentCreateResponse {
+    fun enroll(seminarId: Long, principal: User): EnrollmentCreateResponse {
+
+        val userId = requireNotNull(principal.id)
+        if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
+        }
 
         val seminar = seminarRepository.findById(seminarId)
             .orElseThrow { SeminarNotFoundException(seminarId) }
-        val user = userRepository.findById(request.rookieId)
-            .orElseThrow { UserNotFoundException() }
 
-        if (user.role != "ROOKIE") {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "신청자는 ROOKIE여야 합니다.")
-        }
-        if (user.status != "APPROVED") {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "승인된 루키만 신청할 수 있습니다.")
-        }
-
-        if (enrollmentRepository.existsByUserIdAndSeminarId(request.rookieId, seminarId)) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "이미 신청한 세미나입니다.")
+        if (enrollmentRepository.existsByUserIdAndSeminarId(userId, seminarId)) {
+            throw ResponseStatusException(HttpStatus.CONFLICT)
         }
 
         val now = LocalDateTime.now(kst)
         val enrolledCount = seminarRepository.countEnrolledUsers(seminarId)
         val isOpen = !now.isBefore(seminar.applyStartAt) &&
-            now.isBefore(seminar.applyEndAt) &&
-            enrolledCount < seminar.capacity
+                now.isBefore(seminar.applyEndAt) &&
+                enrolledCount < seminar.capacity
         if (!isOpen) {
             throw ResponseStatusException(HttpStatus.CONFLICT, "현재 신청할 수 없는 세미나입니다.")
         }
@@ -56,7 +55,7 @@ class EnrollmentService(
             Enrollment(
                 remainingGraceDays = seminar.totalGraceDays,
                 createdAt = now,
-                userId = request.rookieId,
+                userId = userId,
                 seminarId = seminarId,
             ),
         )
@@ -68,17 +67,18 @@ class EnrollmentService(
         )
     }
 
-    fun delete(seminarId: Long, enrollmentId: Long){
-        val enrollment = enrollmentRepository.findById(enrollmentId)
-            .orElseThrow { EnrollmentNotFoundException(enrollmentId) }
-
-        // 다른 세미나의 enrollment ID를 넣어도 삭제되지 않도록 확인
-        if (enrollment.seminarId != seminarId) {
-            throw EnrollmentNotFoundException(enrollmentId)
+    fun delete(seminarId: Long, principal: User){
+        if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
+
+        val userId = requireNotNull(principal.id)
 
         val seminar = seminarRepository.findById(seminarId)
             .orElseThrow { SeminarNotFoundException(seminarId) }
+
+        val enrollment = enrollmentRepository.findByUserIdAndSeminarId(userId, seminarId)
+            ?: throw EnrollmentNotFoundException(userId, seminarId)
 
         val now = LocalDateTime.now(kst)
         val isWithinApplicationPeriod =
@@ -88,7 +88,75 @@ class EnrollmentService(
             throw ResponseStatusException(HttpStatus.CONFLICT, "신청 기간에만 취소할 수 있습니다.")
         }
 
-        enrollmentRepository.deleteById(enrollmentId)
+        enrollmentRepository.delete(enrollment)
+    }
+
+    fun getMyEnrollments(
+        principal: User,
+        page: Int,
+        size: Int,
+    ): MyEnrollmentListResponse {
+        if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
+        }
+
+        if (page < 0 || size !in 1..100) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        }
+
+        val userId = requireNotNull(principal.id)
+        val pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(
+                Sort.Order.desc("createdAt"),
+                Sort.Order.desc("id"),
+            ),
+        )
+
+        val enrollments = enrollmentRepository.findAllByUserId(userId, pageable)
+        val totalElements = enrollmentRepository.countByUserId(userId)
+
+        val content = enrollments.map { enrollment ->
+            val seminar = seminarRepository.findById(enrollment.seminarId)
+                .orElseThrow { SeminarNotFoundException(enrollment.seminarId) }
+
+            val enrolledCount = seminarRepository.countEnrolledUsers(enrollment.seminarId)
+            val seminarResponse = SeminarDetailResponse.from(
+                seminar,
+                enrolledCount,
+                seminarRepository.countSessions(enrollment.seminarId),
+            )
+
+            MyEnrollmentItemResponse(
+                id = requireNotNull(enrollment.id),
+                seminar = MyEnrollmentSeminarResponse(
+                    id = seminarResponse.id,
+                    title = seminarResponse.title,
+                    description = seminarResponse.description,
+                    status = seminarResponse.status,
+                    capacity = seminarResponse.capacity,
+                    enrolledCount = seminarResponse.enrolledCount,
+                    applyStartAt = seminarResponse.applyStartAt,
+                    applyEndAt = seminarResponse.applyEndAt,
+                ),
+                graceDaysRemaining = enrollment.remainingGraceDays,
+                dropped = enrollment.failed,
+                createdAt = enrollment.createdAt.atOffset(ZoneOffset.ofHours(9)),
+            )
+        }
+
+        val totalPages =
+            if (totalElements == 0L) 0
+            else ((totalElements + size - 1) / size).toInt()
+
+        return MyEnrollmentListResponse(
+            content = content,
+            page = page,
+            size = size,
+            totalElements = totalElements,
+            totalPages = totalPages,
+        )
     }
 
 }
