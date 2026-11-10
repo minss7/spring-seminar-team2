@@ -87,8 +87,7 @@ class SessionService(
                 ?: throw AccessDeniedException("허가되지 않은 사용자입니다.")
             val enrollment = enrollmentRepository.findByUserIdAndSeminarId(userId, seminarId)
             if (principal.status != "APPROVED" ||
-                enrollment == null ||
-                enrollment.failed
+                enrollment == null
             ) {
                 throw AccessDeniedException("허가되지 않은 사용자입니다.")
             }
