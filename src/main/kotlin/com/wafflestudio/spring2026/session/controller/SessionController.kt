@@ -17,11 +17,14 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import java.net.URI
 import com.wafflestudio.spring2026.session.dto.SessionUpdateRequest
+import com.wafflestudio.spring2026.session.dto.SessionRecordsPatchRequest
+import com.wafflestudio.spring2026.session.service.SessionRecordService
 
 @RestController
 
 class SessionController (
     private val sessionService: SessionService,
+    private val sessionRecordService: SessionRecordService,
 ){
     @PostMapping("/seminars/{seminarId}/sessions")
     fun createSession(
@@ -62,6 +65,19 @@ class SessionController (
         return ResponseEntity.ok(
             sessionService.updateSession(sessionId, request, principal)
         )
+    }
+
+    @PatchMapping("/sessions/{sessionId}/records")
+    fun updateRecords(
+        @PathVariable sessionId: Long,
+        @RequestBody body: Map<String, Any?>,
+        @AuthenticationPrincipal principal: User,
+    ): ResponseEntity<Void> {
+        val request = SessionRecordsPatchRequest.fromMap(body)
+
+        sessionRecordService.updateRecords(sessionId, request, principal)
+
+        return ResponseEntity.noContent().build()
     }
 
 }

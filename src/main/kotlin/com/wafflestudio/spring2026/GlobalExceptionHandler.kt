@@ -15,6 +15,9 @@ import java.util.Collections.emptyList
 import com.wafflestudio.spring2026.auth.exception.LoginFailedException
 import org.springframework.security.access.AccessDeniedException
 import com.wafflestudio.spring2026.auth.exception.InvalidTokenException
+import com.wafflestudio.spring2026.session.exception.SessionNotFoundException
+import org.springframework.web.server.ResponseStatusException
+import org.springframework.http.converter.HttpMessageNotReadableException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -152,5 +155,38 @@ class GlobalExceptionHandler {
                 code = "UNAUTHORIZED",
                 message = exception.message ?: "유효하지 않은 토큰입니다.",
             )
+        )
+
+    @ExceptionHandler(SessionNotFoundException::class)
+    fun handleSessionNotFound(
+        exception: SessionNotFoundException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ApiErrorResponse(
+                code = "SESSION_NOT_FOUND",
+                message = exception.message ?: "회차를 찾을 수 없습니다.",
+            ),
+        )
+
+    @ExceptionHandler(ResponseStatusException::class)
+    fun handleResponseStatus(
+        exception: ResponseStatusException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.status(exception.statusCode).body(
+            ApiErrorResponse(
+                code = "REQUEST_FAILED",
+                message = exception.reason ?: "요청을 처리할 수 없습니다.",
+            ),
+        )
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleUnreadableRequest(
+        exception: HttpMessageNotReadableException,
+    ): ResponseEntity<ApiErrorResponse> =
+        ResponseEntity.badRequest().body(
+            ApiErrorResponse(
+                code = "INVALID_REQUEST",
+                message = "요청 본문이 올바르지 않습니다.",
+            ),
         )
 }
