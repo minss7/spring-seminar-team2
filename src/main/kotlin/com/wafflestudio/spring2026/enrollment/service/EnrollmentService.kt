@@ -1,6 +1,8 @@
 package com.wafflestudio.spring2026.enrollment.service
 
 import com.wafflestudio.spring2026.enrollment.dto.EnrollmentCreateResponse
+import com.wafflestudio.spring2026.enrollment.dto.EnrollmentUpdateRequest
+import com.wafflestudio.spring2026.enrollment.dto.EnrollmentUpdateResponse
 import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentListResponse
 import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentItemResponse
 import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentSeminarResponse
@@ -158,5 +160,86 @@ class EnrollmentService(
             totalPages = totalPages,
         )
     }
+
+    @Transactional
+    fun patch(
+        seminarId: Long,
+        enrollmentId: Long,
+        request: EnrollmentUpdateRequest,
+        principal: User,
+    ): EnrollmentUpdateResponse {
+
+
+        val seminar = seminarRepository.findById(seminarId)
+            .orElseThrow { SeminarNotFoundException(seminarId) }
+
+        val enrollment = enrollmentRepository.findById(enrollmentId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
+
+        //권한 검사
+        if (principal.role != "ADMIN") {
+            if (
+                principal.status != "APPROVED" ||
+                principal.role != "STAFF" ||
+                principal.assignedSeminarId != seminarId
+            ) {
+                throw ResponseStatusException(HttpStatus.FORBIDDEN)
+            }
+        }
+        //enrollment가 실제 소속된 세미나와 들어온 input의 세미나가 다른 경우
+        if (enrollment.seminarId != seminarId) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        }
+
+        if (!request.hasGraceDaysRemaining && !request.hasDropped) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        }
+
+        val graceDaysRemaining = if (request.hasGraceDaysRemaining) {
+            val value = request.graceDaysRemaining
+
+            if (value == null || value.isNull ||
+                !value.isIntegralNumber || !value.canConvertToInt()
+            ) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+            }
+
+            val parsedValue = value.intValue()
+            if (parsedValue < 0 || parsedValue > seminar.totalGraceDays) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+            }
+
+            parsedValue
+        } else {
+            enrollment.remainingGraceDays
+        }
+
+        val dropped: Boolean = if (request.hasDropped) {
+            val value = request.dropped
+
+            if (value == null || value.isNull || !value.isBoolean) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+            }
+
+            value.booleanValue()
+        } else {
+            enrollment.failed
+        }
+
+        val saved = enrollmentRepository.save(
+            enrollment.copy(
+                remainingGraceDays = graceDaysRemaining,
+                failed = dropped,
+            ),
+        )
+
+        return EnrollmentUpdateResponse(
+            id = requireNotNull(saved.id),
+            graceDaysRemaining = saved.remainingGraceDays,
+            dropped = saved.failed,
+            createdAt = saved.createdAt.atOffset(kst),
+        )
+    }
+
 
 }
