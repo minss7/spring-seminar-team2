@@ -9,5 +9,6 @@ interface EnrollmentRepository : CrudRepository<Enrollment, Long>, PagingAndSort
     fun existsByUserIdAndSeminarId(userId: Long, seminarId: Long): Boolean
     fun findByUserIdAndSeminarId(userId: Long, seminarId: Long): Enrollment?
     fun findAllByUserId(userId: Long, pageable: Pageable): List<Enrollment>
+    fun findAllBySeminarId(seminarId: Long, pageable: Pageable): List<Enrollment>
     fun countByUserId(userId: Long): Long
 }

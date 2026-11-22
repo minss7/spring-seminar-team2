@@ -6,6 +6,7 @@ import com.wafflestudio.spring2026.seminar.dto.SeminarCreateResponse
 import com.wafflestudio.spring2026.seminar.dto.SeminarDetailResponse
 import com.wafflestudio.spring2026.seminar.dto.SeminarPageResponse
 import com.wafflestudio.spring2026.seminar.dto.SeminarUpdateRequest
+import com.wafflestudio.spring2026.seminar.dto.SeminarDashboardResponse
 import com.wafflestudio.spring2026.seminar.service.SeminarService
 import jakarta.validation.Valid
 import java.net.URI
@@ -50,6 +51,21 @@ class SeminarController(
             return ResponseEntity.ok(response)
     }
 
+    @GetMapping("/{seminarId}/dashboard")
+    fun getDashboard(//세미나의 회차와 수강생별 운영 현황
+        @AuthenticationPrincipal principal: User,
+        @PathVariable seminarId: Long,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): ResponseEntity<SeminarDashboardResponse>{
+        require(page >= 0) { "page는 0 이상이어야 합니다." }
+        require(size in 1..100) { "size는 1 이상 100 이하여야 합니다." }
+        //권한 검사하고 response 받아오기
+        val response: SeminarDashboardResponse =
+            seminarService.getDashboard(principal, seminarId, page, size)
+        return ResponseEntity.ok(response)
+    }
+
     @PatchMapping("/{seminarId}")
     fun updateSeminar(
         @PathVariable seminarId: Long,
@@ -59,6 +75,4 @@ class SeminarController(
         val request = SeminarUpdateRequest.fromMap(body)
         return seminarService.updateSeminar(seminarId, request, principal)
     }
-
-
 }
