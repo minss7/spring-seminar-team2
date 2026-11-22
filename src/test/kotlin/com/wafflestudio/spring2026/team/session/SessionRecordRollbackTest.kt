@@ -46,25 +46,30 @@ class SessionRecordRollbackTest : Week4ApiIntegrationTest() {
     )
 
     @Test
-    fun `실제 첫 기록 저장 이후 예외가 발생하면 일괄 수정 전체가 롤백된다`() {
+    fun `기록 생성 수정 삭제 후 예외가 발생하면 모든 변경이 롤백된다`() {
         // 테스트 메서드에는 @Transactional을 붙이지 않습니다.
         // API 준비 요청은 각각 완료되며, 이후 서비스 호출과 별도 트랜잭션입니다.
         val adminToken = adminToken()
         val seminarId = createSeminar()
         val sessionId = createSession(seminarId)
-        val first = enrolledRookie(seminarId)
-        val second = enrolledRookie(seminarId)
+        val created = enrolledRookie(seminarId)
+        val updated = enrolledRookie(seminarId)
+        val deleted = enrolledRookie(seminarId)
 
         updateRecords(
             sessionId,
             adminToken,
             recordPatch(
-                first.enrollmentId,
+                created.enrollmentId,
+                "assignmentStatus" to "PASSED",
+            ),
+            recordPatch(
+                updated.enrollmentId,
                 "attendance" to "PRESENT",
                 "assignmentStatus" to "PASSED",
             ),
             recordPatch(
-                second.enrollmentId,
+                deleted.enrollmentId,
                 "attendance" to "ABSENT",
                 "assignmentStatus" to "NOT_SUBMITTED",
             ),
@@ -77,25 +82,24 @@ class SessionRecordRollbackTest : Week4ApiIntegrationTest() {
 
         assertEquals(
             listOf(
-                StoredRecord(first.enrollmentId, "PRESENT", "PASSED"),
-                StoredRecord(second.enrollmentId, "ABSENT", "NOT_SUBMITTED"),
+                StoredRecord(created.enrollmentId, null, "PASSED"),
+                StoredRecord(updated.enrollmentId, "PRESENT", "PASSED"),
+                StoredRecord(deleted.enrollmentId, "ABSENT", "NOT_SUBMITTED"),
             ),
             before,
         )
 
-        var observedFirstWrite = false
+        var observedWrites = false
 
-        // 두 번째 항목의 과제 기록을 조회하는 시점에 실패를 주입합니다.
-        // 첫 번째 항목의 출석 변경이 이미 실행된 다음입니다.
+        // 마지막 항목의 출석을 삭제한 뒤 과제 기록 조회에서 실패를 주입합니다.
         Mockito.doAnswer {
             assertTrue(
                 TransactionSynchronizationManager.isActualTransactionActive(),
                 "실패 주입이 서비스의 실제 트랜잭션 안에서 실행되어야 합니다.",
             )
 
-            // 같은 트랜잭션의 JDBC 연결로 첫 변경을 직접 조회합니다.
-            // Spring Data JDBC의 save는 이 시점 전에 SQL을 실행합니다.
-            val statusInTransaction = jdbcTemplate.queryForObject(
+            // 같은 트랜잭션에서 실제 생성, 수정, 삭제가 실행되었는지 확인합니다.
+            val createdStatus = jdbcTemplate.queryForObject(
                 """
                 SELECT status
                 FROM attendances
@@ -103,21 +107,36 @@ class SessionRecordRollbackTest : Week4ApiIntegrationTest() {
                 """.trimIndent(),
                 String::class.java,
                 sessionId,
-                first.enrollmentId,
+                created.enrollmentId,
+            )
+            val updatedStatus = jdbcTemplate.queryForObject(
+                "SELECT status FROM attendances WHERE session_id = ? AND enrollment_id = ?",
+                String::class.java,
+                sessionId,
+                updated.enrollmentId,
+            )
+            val deletedCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM attendances WHERE session_id = ? AND enrollment_id = ?",
+                Long::class.java,
+                sessionId,
+                deleted.enrollmentId,
             )
 
-            assertEquals("ABSENT", statusInTransaction)
-            observedFirstWrite = true
+            assertEquals("PRESENT", createdStatus, "출석 생성이 실행되어야 합니다.")
+            assertEquals("ABSENT", updatedStatus, "출석 수정이 실행되어야 합니다.")
+            assertEquals(0L, deletedCount, "출석 삭제가 실행되어야 합니다.")
+            observedWrites = true
 
             throw InjectedFailure()
         }.`when`(submissionRepository)
-            .findBySessionIdAndEnrollmentId(sessionId, second.enrollmentId)
+            .findBySessionIdAndEnrollmentId(sessionId, deleted.enrollmentId)
 
         val request = SessionRecordsPatchRequest.fromMap(
             mapOf(
                 "records" to listOf(
-                    recordPatch(first.enrollmentId, "attendance" to "ABSENT"),
-                    recordPatch(second.enrollmentId, "assignmentStatus" to "PASSED"),
+                    recordPatch(created.enrollmentId, "attendance" to "PRESENT"),
+                    recordPatch(updated.enrollmentId, "attendance" to "ABSENT"),
+                    recordPatch(deleted.enrollmentId, "attendance" to null, "assignmentStatus" to "PASSED"),
                 ),
             ),
         )
@@ -127,7 +146,7 @@ class SessionRecordRollbackTest : Week4ApiIntegrationTest() {
             sessionRecordService.updateRecords(sessionId, request, admin)
         }
 
-        assertTrue(observedFirstWrite, "예외 발생 전에 첫 DB 쓰기가 확인되어야 합니다.")
+        assertTrue(observedWrites, "예외 발생 전에 생성·수정·삭제가 실제 DB에서 실행되어야 합니다.")
 
         // 서비스 호출이 종료된 후 새로운 트랜잭션에서 실제 DB 상태를 비교합니다.
         assertEquals(before, readRecords(sessionId))
