@@ -16,7 +16,9 @@ data class User(
 
     val name: String,
 
-    @Column("github_username") val githubUsername: String,
+    @Column("github_username")
+    val githubUsername: String,
+
     val role: String,
 
     val status: String,
