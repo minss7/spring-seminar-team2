@@ -129,4 +129,35 @@ class TeamEnrollmentConcurrencyTest : ApiIntegrationTest() {
                 seminarId,
             ),
         )
+
+    @Test
+    fun `한 사용자가 10회 동시에 취소하면 한 번만 취소된다`() {
+        val seminarId = createSeminar(capacity = 20)
+        val rookie1 = approvedRookie()
+        val rookie2 = approvedRookie()
+
+        enroll(seminarId, rookie1.token).andExpect {status {isCreated()}}
+        enroll(seminarId, rookie2.token).andExpect {status {isCreated()}}
+
+        assertEquals(2L, enrollmentCount(seminarId))
+
+        val responses = runConcurrently(inputs = List(10) {rookie1}, parallelism = 10,
+        ) {actor -> cancelEnrollment(seminarId, actor.token).andReturn().response.status}
+
+        assertEquals(mapOf(204 to 1, 404 to 9), responses.groupingBy { it }.eachCount(),)
+
+        val rookieEnrollmentCount = jdbcTemplate.queryForObject(
+            """
+            SELECT COUNT(*)
+            FROM enrollments
+            WHERE seminar_id = ? AND user_id = ?
+            """.trimIndent(),
+            Long::class.javaObjectType,
+            seminarId,
+            rookie1.id,
+        )
+
+        assertEquals(0L, rookieEnrollmentCount)
+        assertEquals(1L, enrollmentCount(seminarId))
+    }
 }
