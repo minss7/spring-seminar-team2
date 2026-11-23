@@ -37,8 +37,9 @@ class EnrollmentService(
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
 
-        val seminar = seminarRepository.findById(seminarId)
-            .orElseThrow { SeminarNotFoundException(seminarId) }
+        // 정원 확인과 수강 신청 저장이 끝날 때까지 세미나 행 잠금을 유지한다.
+        val seminar = seminarRepository.findByIdForUpdate(seminarId)
+            ?: throw SeminarNotFoundException(seminarId)
 
         if (enrollmentRepository.existsByUserIdAndSeminarId(userId, seminarId)) {
             throw ResponseStatusException(HttpStatus.CONFLICT)
@@ -69,6 +70,7 @@ class EnrollmentService(
         )
     }
 
+    @Transactional
     fun delete(seminarId: Long, principal: User){
         if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
@@ -76,8 +78,9 @@ class EnrollmentService(
 
         val userId = requireNotNull(principal.id)
 
-        val seminar = seminarRepository.findById(seminarId)
-            .orElseThrow { SeminarNotFoundException(seminarId) }
+        // 신청과 동일한 잠금 순서를 사용해 신청/취소 경합을 직렬화한다.
+        val seminar = seminarRepository.findByIdForUpdate(seminarId)
+            ?: throw SeminarNotFoundException(seminarId)
 
         val enrollment = enrollmentRepository.findByUserIdAndSeminarId(userId, seminarId)
             ?: throw EnrollmentNotFoundException(userId, seminarId)
