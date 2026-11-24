@@ -1,6 +1,8 @@
 package com.wafflestudio.spring2026.enrollment.service
 
 import com.wafflestudio.spring2026.enrollment.dto.EnrollmentCreateResponse
+import com.wafflestudio.spring2026.enrollment.dto.EnrollmentUpdateRequest
+import com.wafflestudio.spring2026.enrollment.dto.EnrollmentUpdateResponse
 import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentListResponse
 import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentItemResponse
 import com.wafflestudio.spring2026.enrollment.dto.MyEnrollmentSeminarResponse
@@ -35,8 +37,9 @@ class EnrollmentService(
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
         }
 
-        val seminar = seminarRepository.findById(seminarId)
-            .orElseThrow { SeminarNotFoundException(seminarId) }
+        // 정원 확인과 수강 신청 저장이 끝날 때까지 세미나 행 잠금을 유지한다.
+        val seminar = seminarRepository.findByIdForUpdate(seminarId)
+            ?: throw SeminarNotFoundException(seminarId)
 
         if (enrollmentRepository.existsByUserIdAndSeminarId(userId, seminarId)) {
             throw ResponseStatusException(HttpStatus.CONFLICT)
@@ -67,6 +70,7 @@ class EnrollmentService(
         )
     }
 
+    @Transactional
     fun delete(seminarId: Long, principal: User){
         if (principal.role != "ADMIN" && (principal.role != "ROOKIE" || principal.status != "APPROVED")) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN)
@@ -74,8 +78,9 @@ class EnrollmentService(
 
         val userId = requireNotNull(principal.id)
 
-        val seminar = seminarRepository.findById(seminarId)
-            .orElseThrow { SeminarNotFoundException(seminarId) }
+        // 신청과 동일한 잠금 순서를 사용해 신청/취소 경합을 직렬화한다.
+        val seminar = seminarRepository.findByIdForUpdate(seminarId)
+            ?: throw SeminarNotFoundException(seminarId)
 
         val enrollment = enrollmentRepository.findByUserIdAndSeminarId(userId, seminarId)
             ?: throw EnrollmentNotFoundException(userId, seminarId)
@@ -158,5 +163,86 @@ class EnrollmentService(
             totalPages = totalPages,
         )
     }
+
+    @Transactional
+    fun patch(
+        seminarId: Long,
+        enrollmentId: Long,
+        request: EnrollmentUpdateRequest,
+        principal: User,
+    ): EnrollmentUpdateResponse {
+
+
+        val seminar = seminarRepository.findById(seminarId)
+            .orElseThrow { SeminarNotFoundException(seminarId) }
+
+        val enrollment = enrollmentRepository.findById(enrollmentId)
+            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND) }
+
+        //권한 검사
+        if (principal.role != "ADMIN") {
+            if (
+                principal.status != "APPROVED" ||
+                principal.role != "STAFF" ||
+                principal.assignedSeminarId != seminarId
+            ) {
+                throw ResponseStatusException(HttpStatus.FORBIDDEN)
+            }
+        }
+        //enrollment가 실제 소속된 세미나와 들어온 input의 세미나가 다른 경우
+        if (enrollment.seminarId != seminarId) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        }
+
+        if (!request.hasGraceDaysRemaining && !request.hasDropped) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        }
+
+        val graceDaysRemaining = if (request.hasGraceDaysRemaining) {
+            val value = request.graceDaysRemaining
+
+            if (value == null || value.isNull ||
+                !value.isIntegralNumber || !value.canConvertToInt()
+            ) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+            }
+
+            val parsedValue = value.intValue()
+            if (parsedValue < 0 || parsedValue > seminar.totalGraceDays) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+            }
+
+            parsedValue
+        } else {
+            enrollment.remainingGraceDays
+        }
+
+        val dropped: Boolean = if (request.hasDropped) {
+            val value = request.dropped
+
+            if (value == null || value.isNull || !value.isBoolean) {
+                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+            }
+
+            value.booleanValue()
+        } else {
+            enrollment.failed
+        }
+
+        val saved = enrollmentRepository.save(
+            enrollment.copy(
+                remainingGraceDays = graceDaysRemaining,
+                failed = dropped,
+            ),
+        )
+
+        return EnrollmentUpdateResponse(
+            id = requireNotNull(saved.id),
+            graceDaysRemaining = saved.remainingGraceDays,
+            dropped = saved.failed,
+            createdAt = saved.createdAt.atOffset(kst),
+        )
+    }
+
 
 }

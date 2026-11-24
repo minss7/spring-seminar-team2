@@ -7,6 +7,10 @@ import org.springframework.data.repository.query.Param
 
 interface SeminarRepository : CrudRepository<Seminar, Long> {
 
+    // 신청과 취소가 같은 세미나 행을 잠그도록 해 정원 검사와 변경을 직렬화한다.
+    @Query("SELECT * FROM seminars WHERE id = :seminarId FOR UPDATE")
+    fun findByIdForUpdate(@Param("seminarId") seminarId: Long): Seminar?
+
     @Query("SELECT COUNT(*) FROM enrollments WHERE seminar_id = :seminarId")
     fun countEnrolledUsers(@Param("seminarId") seminarId: Long): Int
 

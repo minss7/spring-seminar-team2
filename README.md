@@ -6,9 +6,25 @@
 
 ## 주요 링크
 
-- [세미나 자료 및 주차별 과제 안내](https://app.notion.com/p/011b00e8cec4825a997a81b5a8f1087a)
-- [채점 결과 확인 — 리더보드](https://spring-seminar-judge.vercel.app/)
-- [원본 스켈레톤 저장소](https://github.com/WaffleStudio24-5/spring-seminar-upstream)
+<table width="100%">
+  <tr>
+    <th width="250">외부 링크</th>
+    <th width="250">과제 문서</th>
+  </tr>
+  <tr>
+    <td width="250" valign="top">
+      <a href="https://app.notion.com/p/011b00e8cec4825a997a81b5a8f1087a">세미나 자료 및 주차별 과제 안내</a><br>
+      <a href="https://spring-seminar-judge.vercel.app/">채점 결과 확인 — 리더보드</a><br>
+      <a href="https://github.com/WaffleStudio24-5/spring-seminar-upstream">원본 스켈레톤 저장소</a>
+    </td>
+    <td width="250" valign="top">
+      <a href="docs/2주차%20과제.md">2주차 과제</a><br>
+      <a href="docs/3주차%20과제.md">3주차 과제</a><br>
+      <a href="docs/4주차%20과제.md">4주차 과제</a><br>
+      <a href="docs/team2_4주차_설계.md">Team2 4주차 설계 및 테스트</a>
+    </td>
+  </tr>
+</table>
 
 ## 시작하기
 
