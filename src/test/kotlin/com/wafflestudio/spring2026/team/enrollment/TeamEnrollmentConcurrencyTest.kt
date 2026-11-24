@@ -2,6 +2,8 @@ package com.wafflestudio.spring2026.team.enrollment
 
 import com.wafflestudio.spring2026.support.ApiIntegrationTest
 import com.wafflestudio.spring2026.support.runConcurrently
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import kotlin.test.Test
@@ -121,6 +123,101 @@ class TeamEnrollmentConcurrencyTest : ApiIntegrationTest() {
         assertEquals(2L, enrollmentCount(seminarId))
     }
 
+    @Test
+    fun `한 사용자가 10회 동시에 취소하면 한 번만 취소된다`() {
+        val seminarId = createSeminar(capacity = 20)
+        val rookie1 = approvedRookie()
+        val rookie2 = approvedRookie()
+
+        enroll(seminarId, rookie1.token).andExpect {status {isCreated()}}
+        enroll(seminarId, rookie2.token).andExpect {status {isCreated()}}
+
+        assertEquals(2L, enrollmentCount(seminarId))
+
+        val responses = runConcurrently(inputs = List(10) {rookie1}, parallelism = 10,
+        ) {actor -> cancelEnrollment(seminarId, actor.token).andReturn().response.status}
+
+        assertEquals(mapOf(204 to 1, 404 to 9), responses.groupingBy { it }.eachCount(),)
+
+        val rookieEnrollmentCount = jdbcTemplate.queryForObject(
+            """
+    SELECT COUNT(*)
+    FROM enrollments
+    WHERE seminar_id = ? AND user_id = ?
+    """.trimIndent(),
+            Long::class.javaObjectType,
+            seminarId,
+            rookie1.id,
+        )
+
+        assertEquals(0L, rookieEnrollmentCount)
+        assertEquals(1L, enrollmentCount(seminarId))
+    }
+    @Test
+    fun `신청과 취소가 동시에 일어나도 정원과 신청기록이 일치한다`() {
+        val seminarId = createSeminar(capacity = 1)
+        val cancelingRookie = approvedRookie()
+        val applyingRookie = approvedRookie()
+
+        // 정원을 채운 다음, 기존 신청을 취소할 사용자와 새로 신청할 사용자를 준비한다.
+        enroll(seminarId, cancelingRookie.token)
+            .andExpect { status { isCreated() } }
+        Assertions.assertEquals(1L, enrollmentCount(seminarId))
+
+        val operations = listOf(
+            "cancel" to {
+                cancelEnrollment(seminarId, cancelingRookie.token)
+                    .andReturn().response.status
+            },
+            "enroll" to {
+                enroll(seminarId, applyingRookie.token)
+                    .andReturn().response.status
+            },
+        )
+
+        val results = runConcurrently(
+            inputs = operations,
+            parallelism = 2,
+        ) { (operation, request) ->
+            operation to request()
+        }.toMap()
+
+        val cancelStatus = results.getValue("cancel")
+        val enrollStatus = results.getValue("enroll")
+
+        Assertions.assertEquals(204, cancelStatus)
+        assertTrue(enrollStatus == 201 || enrollStatus == 409)
+
+        val canceledUserCount = jdbcTemplate.queryForObject(
+            """
+        SELECT COUNT(*)
+        FROM enrollments
+        WHERE seminar_id = ? AND user_id = ?
+        """.trimIndent(),
+            Long::class.javaObjectType,
+            seminarId,
+            cancelingRookie.id,
+        )!!
+
+        val applyingUserCount = jdbcTemplate.queryForObject(
+            """
+        SELECT COUNT(*)
+        FROM enrollments
+        WHERE seminar_id = ? AND user_id = ?
+        """.trimIndent(),
+            Long::class.javaObjectType,
+            seminarId,
+            applyingRookie.id,
+        )!!
+
+        val expectedCount = if (enrollStatus == 201) 1L else 0L
+
+        Assertions.assertEquals(0L, canceledUserCount)
+        Assertions.assertEquals(expectedCount, applyingUserCount)
+        Assertions.assertEquals(expectedCount, enrollmentCount(seminarId))
+        assertTrue(enrollmentCount(seminarId) <= 1L)
+    }
+
     private fun enrollmentCount(seminarId: Long): Long =
         requireNotNull(
             jdbcTemplate.queryForObject(
@@ -129,4 +226,5 @@ class TeamEnrollmentConcurrencyTest : ApiIntegrationTest() {
                 seminarId,
             ),
         )
+
 }
